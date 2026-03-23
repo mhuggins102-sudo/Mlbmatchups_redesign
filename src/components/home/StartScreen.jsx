@@ -80,16 +80,16 @@ export default function StartScreen() {
   };
 
   return (
-    <div className="max-w-md mx-auto px-4 py-8">
+    <div className="max-w-md mx-auto px-4 py-3">
       {/* Title */}
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-extrabold gradient-text mb-2">MLB Matchups</h1>
-        <p className="text-slate-400 text-sm">The greatest baseball stats game on the web.</p>
+      <div className="text-center mb-4">
+        <h1 className="text-3xl font-extrabold gradient-text mb-1">MLB Matchups</h1>
+        <p className="text-slate-400 text-xs">The greatest baseball stats game on the web.</p>
       </div>
 
       {/* Game Mode */}
-      <section className="mb-6">
-        <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Game Mode</h2>
+      <section className="mb-3">
+        <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Game Mode</h2>
         <div className="grid grid-cols-2 gap-3">
           {gameModes.map((m) => (
             <GameModeCard
@@ -106,8 +106,8 @@ export default function StartScreen() {
       </section>
 
       {/* Player Pool */}
-      <section className="mb-6">
-        <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Player Pool</h2>
+      <section className="mb-3">
+        <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Player Pool</h2>
         <div className="flex bg-surface-raised/50 rounded-xl p-1">
           {poolOptions.map((opt) => (
             <button
@@ -122,8 +122,8 @@ export default function StartScreen() {
       </section>
 
       {/* Eligibility */}
-      <section className="mb-6">
-        <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Eligibility</h2>
+      <section className="mb-3">
+        <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Eligibility</h2>
         <div className="flex bg-surface-raised/50 rounded-xl p-1">
           {eligOptions.map((opt) => (
             <button
@@ -141,8 +141,8 @@ export default function StartScreen() {
       </section>
 
       {/* Era */}
-      <section className="mb-8 relative">
-        <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Era</h2>
+      <section className="mb-4 relative">
+        <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Era</h2>
         <button
           onClick={() => setEraOpen((o) => !o)}
           className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-surface-raised/50 border border-slate-700/50 text-sm text-slate-200 hover:border-slate-600 transition-colors"

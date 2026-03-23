@@ -262,10 +262,10 @@ export default function GameScreen() {
 
       const emoji = getHowMuchEmoji(result.points, result.playerCorrect, result.rangeCorrect, result.bullseye);
       let feedback = '';
-      if (result.bullseye) feedback = `Bullseye! +${result.points} pts`;
-      else if (result.playerCorrect && result.rangeCorrect) feedback = `In range! +${result.points} pts`;
-      else if (result.playerCorrect) feedback = `Right player, wrong range. +${result.points} pts`;
-      else feedback = `Wrong player. +0 pts`;
+      if (result.bullseye) feedback = `Bullseye  +${result.points}`;
+      else if (result.playerCorrect && result.rangeCorrect) feedback = `Nailed it  +${result.points}`;
+      else if (result.playerCorrect) feedback = `Right call, off range  +${result.points}`;
+      else feedback = `Wrong pick  +0`;
 
       addScore(result.points);
       pushRoundResult(emoji, result.points);
@@ -279,7 +279,7 @@ export default function GameScreen() {
       const evalResult = evaluateShowdown(pA, pB, sbsPicks, cats);
 
       const emoji = getShowdownEmoji(evalResult.correctCount);
-      const feedback = `${evalResult.correctCount}/10 correct! +${evalResult.roundScore} pts`;
+      const feedback = `${evalResult.correctCount}/10  +${evalResult.roundScore}`;
 
       addScore(evalResult.roundScore);
       pushRoundResult(emoji, evalResult.roundScore);
@@ -296,7 +296,7 @@ export default function GameScreen() {
       const emoji = getPickEmEmoji(pts, pickEmState.picksMade);
       addScore(pts);
       pushRoundResult(emoji, pts);
-      useGameStore.setState({ lastRoundScore: pts, lastRoundFeedback: `+${pts} pts` });
+      useGameStore.setState({ lastRoundScore: pts, lastRoundFeedback: `Round complete  +${pts}` });
       setRoundSubmitted(true);
 
     } else if (gameMode === 'top10') {
@@ -314,7 +314,7 @@ export default function GameScreen() {
       const emoji = getTop10Emoji(hitCount);
       // Don't call addScore — it was already added per correct guess in TopTenMode
       pushRoundResult(emoji, userGuessedScore);
-      useGameStore.setState({ lastRoundScore: userGuessedScore, lastRoundFeedback: `${hitCount}/10 found! +${userGuessedScore} pts` });
+      useGameStore.setState({ lastRoundScore: userGuessedScore, lastRoundFeedback: `${hitCount}/10 found  +${userGuessedScore}` });
       setRoundSubmitted(true);
     }
   }, [
@@ -394,7 +394,7 @@ export default function GameScreen() {
       {roundSubmitted && gameMode === 'sideBySide' && (
         <RoundFeedback
           text={lastRoundFeedback}
-          type={lastRoundScore >= 450 ? 'success' : lastRoundScore >= 100 ? 'warning' : 'error'}
+          type={lastRoundScore >= 400 ? 'success' : lastRoundScore >= 150 ? 'warning' : 'error'}
         />
       )}
 

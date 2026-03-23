@@ -11,6 +11,7 @@ export default function ShowdownMode() {
   const setSbsPick = useGameStore((s) => s.setSbsPick);
   const roundSubmitted = useGameStore((s) => s.roundSubmitted);
   const useWholeNumbers = useGameStore((s) => s.useWholeNumbers);
+  const useAnimations = useGameStore((s) => s.useAnimations);
   const players = usePlayerStore((s) => s.players);
 
   const [revealedRows, setRevealedRows] = useState(new Set());
@@ -36,6 +37,11 @@ export default function ShowdownMode() {
       setRevealedRows(new Set());
       return;
     }
+    if (!useAnimations) {
+      // Reveal all at once
+      setRevealedRows(new Set([0,1,2,3,4,5,6,7,8,9]));
+      return;
+    }
     let i = 0;
     const interval = setInterval(() => {
       if (i >= 10) { clearInterval(interval); return; }
@@ -43,7 +49,7 @@ export default function ShowdownMode() {
       i++;
     }, 200);
     return () => clearInterval(interval);
-  }, [showdownResults]);
+  }, [showdownResults, useAnimations]);
 
   if (!currentRound || !playerA || !playerB) {
     return <div style={{ textAlign: 'center', padding: '2rem', opacity: 0.5 }}>Generating round...</div>;
@@ -81,9 +87,9 @@ export default function ShowdownMode() {
         return (
           <motion.div
             key={cat.key}
-            initial={{ opacity: 0, x: -10 }}
+            initial={useAnimations ? { opacity: 0, x: -10 } : false}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.04 }}
+            transition={useAnimations ? { delay: i * 0.04 } : { duration: 0 }}
             style={{
               display: 'grid',
               gridTemplateColumns: '1fr 1fr 1fr',
@@ -116,11 +122,16 @@ export default function ShowdownMode() {
                 borderRadius: '0.5rem',
                 border: pick === 'A' ? '2px solid #3b82f6' : '2px solid transparent',
                 background: result && isRevealed
-                  ? (result.correct && pick === 'A' ? 'rgba(34,197,94,0.2)' :
-                     !result.correct && pick === 'A' ? 'rgba(239,68,68,0.2)' :
+                  ? (result.correct && pick === 'A' ? 'rgba(34,197,94,0.25)' :
+                     !result.correct && pick === 'A' ? 'rgba(239,68,68,0.25)' :
                      result.winner === 'A' || result.winner === 'tie' ? 'rgba(34,197,94,0.1)' : 'transparent')
                   : pick === 'A' ? 'rgba(59,130,246,0.15)' : 'transparent',
-                transition: 'all 0.2s',
+                transition: useAnimations ? 'all 0.4s ease' : 'all 0.1s',
+                fontWeight: result && isRevealed ? 700 : 600,
+                color: result && isRevealed
+                  ? (result.correct && pick === 'A' ? '#6ee7b7' :
+                     !result.correct && pick === 'A' ? '#fca5a5' : undefined)
+                  : undefined,
               }}
             >
               {result && isRevealed
@@ -139,11 +150,16 @@ export default function ShowdownMode() {
                 borderRadius: '0.5rem',
                 border: pick === 'B' ? '2px solid #3b82f6' : '2px solid transparent',
                 background: result && isRevealed
-                  ? (result.correct && pick === 'B' ? 'rgba(34,197,94,0.2)' :
-                     !result.correct && pick === 'B' ? 'rgba(239,68,68,0.2)' :
+                  ? (result.correct && pick === 'B' ? 'rgba(34,197,94,0.25)' :
+                     !result.correct && pick === 'B' ? 'rgba(239,68,68,0.25)' :
                      result.winner === 'B' || result.winner === 'tie' ? 'rgba(34,197,94,0.1)' : 'transparent')
                   : pick === 'B' ? 'rgba(59,130,246,0.15)' : 'transparent',
-                transition: 'all 0.2s',
+                transition: useAnimations ? 'all 0.4s ease' : 'all 0.1s',
+                fontWeight: result && isRevealed ? 700 : 600,
+                color: result && isRevealed
+                  ? (result.correct && pick === 'B' ? '#6ee7b7' :
+                     !result.correct && pick === 'B' ? '#fca5a5' : undefined)
+                  : undefined,
               }}
             >
               {result && isRevealed

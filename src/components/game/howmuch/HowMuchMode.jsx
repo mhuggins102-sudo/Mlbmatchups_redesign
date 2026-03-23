@@ -16,6 +16,7 @@ export default function HowMuchMode() {
   const lastRoundFeedback = useGameStore((s) => s.lastRoundFeedback);
   const lastRoundScore = useGameStore((s) => s.lastRoundScore);
   const useWholeNumbers = useGameStore((s) => s.useWholeNumbers);
+  const useAnimations = useGameStore((s) => s.useAnimations);
   const sliderState = useGameStore((s) => s.sliderState);
   const players = usePlayerStore((s) => s.players);
 
@@ -34,12 +35,13 @@ export default function HowMuchMode() {
 
   const feedbackType = lastRoundScore >= 800 ? 'success' : lastRoundScore >= 200 ? 'warning' : 'error';
 
+  const anim = (props) => useAnimations ? props : {};
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       {/* Prompt */}
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+        {...anim({ initial: { opacity: 0 }, animate: { opacity: 1 } })}
         style={{ textAlign: 'center', fontWeight: 600, fontSize: '1.05rem', opacity: 0.85 }}
       >
         Whose <span style={{ color: '#60a5fa' }}>{catDef.label}</span> is {catDef.lowerBetter ? 'lower' : 'higher'}?
@@ -68,28 +70,44 @@ export default function HowMuchMode() {
       {/* Slider section — show after pick */}
       {versusPick && (
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
+          {...anim({ initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 } })}
           style={{ padding: '0 0.25rem' }}
         >
           <div style={{ textAlign: 'center', fontWeight: 600, fontSize: '0.95rem', marginBottom: '0.5rem', opacity: 0.85 }}>
             By how much?
           </div>
-          <DualSlider disabled={roundSubmitted} />
+          <DualSlider
+            disabled={roundSubmitted}
+            bullseyeSize={BASE_BULL[catKey] || 0}
+            answerValue={roundSubmitted ? trueDiff : null}
+          />
 
-          {/* Answer pin after submit */}
+          {/* Actual difference after submit */}
           {roundSubmitted && (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              {...anim({
+                initial: { opacity: 0, scale: 0.9 },
+                animate: { opacity: 1, scale: 1 },
+                transition: { delay: 0.3, type: 'spring', stiffness: 300, damping: 20 },
+              })}
               style={{
                 textAlign: 'center',
                 marginTop: '0.5rem',
                 fontSize: '0.85rem',
-                opacity: 0.7,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.4rem',
               }}
             >
-              Actual difference: <strong>{formatStat(trueDiff, catKey, useWholeNumbers)}</strong>
+              <span style={{ opacity: 0.5 }}>Actual:</span>
+              <span style={{
+                fontWeight: 700,
+                color: '#10b981',
+                fontSize: '0.95rem',
+              }}>
+                {formatStat(trueDiff, catKey, useWholeNumbers)}
+              </span>
             </motion.div>
           )}
         </motion.div>

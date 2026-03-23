@@ -5,7 +5,7 @@ function clamp(val, lo, hi) {
   return Math.min(hi, Math.max(lo, val));
 }
 
-export default function DualSlider({ disabled }) {
+export default function DualSlider({ disabled, bullseyeSize, answerValue }) {
   const sliderState = useGameStore((s) => s.sliderState);
   const updateSliderState = useGameStore((s) => s.updateSliderState);
   const deadZoneEnabled = useGameStore((s) => s.deadZoneEnabled);
@@ -67,6 +67,16 @@ export default function DualSlider({ disabled }) {
   const minPct = toPercent(min);
   const maxPct = toPercent(max);
   const deadZonePct = toPercent(minLimit);
+
+  // Bullseye zone: centered on midpoint of user range
+  const bw = bullseyeSize || 0;
+  const mid = (min + max) / 2;
+  const bullLeft = toPercent(Math.max(0, mid - bw / 2));
+  const bullRight = toPercent(Math.min(rangeMax, mid + bw / 2));
+  const showBullseye = bw > 0 && !disabled;
+
+  // Answer pin after submission
+  const answerPct = answerValue != null ? toPercent(clamp(answerValue, 0, rangeMax)) : null;
 
   return (
     <div style={{ padding: '0.5rem 0' }}>
@@ -130,6 +140,42 @@ export default function DualSlider({ disabled }) {
           }}
         />
 
+        {/* Bullseye zone */}
+        {showBullseye && (
+          <div
+            className="slider-bullseye"
+            style={{
+              position: 'absolute',
+              left: `${bullLeft}%`,
+              width: `${bullRight - bullLeft}%`,
+              top: 0,
+              height: '100%',
+              background: 'rgba(245, 158, 11, 0.6)',
+              borderRadius: '4px',
+              zIndex: 1,
+            }}
+          />
+        )}
+
+        {/* Answer pin after submit */}
+        {answerPct != null && (
+          <div
+            className="slider-answer-pin"
+            style={{
+              position: 'absolute',
+              left: `${answerPct}%`,
+              top: '-4px',
+              width: '3px',
+              height: 'calc(100% + 8px)',
+              background: '#10b981',
+              borderRadius: '2px',
+              transform: 'translateX(-50%)',
+              zIndex: 40,
+              boxShadow: '0 0 8px rgba(16, 185, 129, 0.6)',
+            }}
+          />
+        )}
+
         {/* Min thumb */}
         <div
           className="slider-thumb"
@@ -169,6 +215,22 @@ export default function DualSlider({ disabled }) {
             zIndex: 2,
           }}
         />
+      </div>
+
+      {/* Legend */}
+      <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.4rem', fontSize: '0.7rem', opacity: 0.5 }}>
+        {bw > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <span style={{ width: 8, height: 8, borderRadius: 2, background: '#f59e0b', display: 'inline-block' }} />
+            Bullseye
+          </div>
+        )}
+        {deadZoneEnabled && deadZonePct > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <span style={{ width: 8, height: 8, borderRadius: 2, background: 'rgba(239,68,68,0.5)', display: 'inline-block' }} />
+            Dead Zone
+          </div>
+        )}
       </div>
     </div>
   );
