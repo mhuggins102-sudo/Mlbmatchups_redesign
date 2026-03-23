@@ -3,125 +3,253 @@ import { motion, AnimatePresence } from 'framer-motion';
 import useGameStore from '../../stores/gameStore';
 import { CUSTOM_STAT_OPTIONS, CUSTOM_PRESETS } from '../../engine/categories';
 
+const TABS = ['Presets', 'Customize'];
+const PRESET_SUBTABS = ['Hitter', 'Pitcher'];
+
+function PresetCard({ preset, onApply }) {
+  return (
+    <button
+      onClick={() => onApply(preset.filters)}
+      className="w-full text-left p-3 rounded-lg hover:border-blue-500/30 transition-all"
+      style={{ background: 'rgba(30, 41, 59, 0.5)', border: '1px solid rgba(51, 65, 85, 0.3)' }}
+    >
+      <div className="text-sm font-semibold text-slate-200">{preset.name}</div>
+      <div className="text-xs text-slate-400 mt-0.5">{preset.desc}</div>
+      <div className="text-[10px] text-slate-500 mt-1 font-semibold">
+        {preset.filters.map((f) => {
+          const opt = CUSTOM_STAT_OPTIONS.find((o) => o.key === f.stat);
+          return `${opt?.label || f.stat} ${f.dir === 'max' ? '\u2264' : '\u2265'} ${f.value}`;
+        }).join(', ')}
+      </div>
+    </button>
+  );
+}
+
+function FilterRow({ filter, index, onChange, onRemove }) {
+  return (
+    <div className="flex items-center gap-2">
+      {/* Stat dropdown */}
+      <select
+        value={filter.stat}
+        onChange={(e) => onChange(index, { ...filter, stat: e.target.value })}
+        className="flex-1 px-2 py-1.5 rounded-lg bg-surface-dark border border-slate-700/50 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+      >
+        <option value="">Select stat...</option>
+        <optgroup label="Batters">
+          {CUSTOM_STAT_OPTIONS.filter((o) => o.type === 'hitter').map((opt) => (
+            <option key={opt.key} value={opt.key}>{opt.label}</option>
+          ))}
+        </optgroup>
+        <optgroup label="Pitchers">
+          {CUSTOM_STAT_OPTIONS.filter((o) => o.type === 'pitcher').map((opt) => (
+            <option key={opt.key} value={opt.key}>{opt.label}</option>
+          ))}
+        </optgroup>
+        <optgroup label="All Players">
+          {CUSTOM_STAT_OPTIONS.filter((o) => o.type === 'both').map((opt) => (
+            <option key={opt.key} value={opt.key}>{opt.label}</option>
+          ))}
+        </optgroup>
+      </select>
+
+      {/* Direction toggle */}
+      <button
+        onClick={() => onChange(index, { ...filter, dir: filter.dir === 'min' ? 'max' : 'min' })}
+        className="px-2 py-1.5 rounded-lg bg-surface-dark border border-slate-700/50 text-xs font-bold text-slate-200 hover:border-blue-500/50 transition-colors min-w-[2rem] text-center"
+      >
+        {filter.dir === 'min' ? '\u2265' : '\u2264'}
+      </button>
+
+      {/* Value input */}
+      <input
+        type="number"
+        value={filter.value}
+        onChange={(e) => onChange(index, { ...filter, value: parseFloat(e.target.value) || 0 })}
+        className="w-20 px-2 py-1.5 rounded-lg bg-surface-dark border border-slate-700/50 text-xs text-slate-200 focus:outline-none focus:border-blue-500 tabular-nums"
+        step="any"
+      />
+
+      {/* Remove button */}
+      <button
+        onClick={() => onRemove(index)}
+        className="text-slate-500 hover:text-red-400 transition-colors text-sm leading-none px-1"
+      >
+        &times;
+      </button>
+    </div>
+  );
+}
+
 export default function CustomEligModal({ isOpen, onClose }) {
-  const [tab, setTab] = useState('presets');
-  const [subTab, setSubTab] = useState('hitter');
-  const [selectedPreset, setSelectedPreset] = useState(null);
-  const [filters, setFilters] = useState([{ stat: '', value: '', dir: 'min' }]);
+  const customFilters = useGameStore((s) => s.customFilters);
   const setCustomFilters = useGameStore((s) => s.setCustomFilters);
-  const setPlayerPool = useGameStore((s) => s.setPlayerPool);
+  const setEligibility = useGameStore((s) => s.setEligibility);
   const showToast = useGameStore((s) => s.showToast);
 
-  const applyPreset = () => {
-    if (!selectedPreset) { showToast('Select a preset first.', 'bg-red-500'); return; }
-    const preset = CUSTOM_PRESETS.find((p) => p.id === selectedPreset);
-    if (preset) {
-      setCustomFilters(preset.filters.slice());
-      setPlayerPool(preset.type === 'hitter' ? 'batters' : 'pitchers');
-      showToast(`Preset applied: ${preset.name}`, 'bg-blue-600');
-    }
-    onClose();
-  };
+  const [tab, setTab] = useState('Presets');
+  const [presetSubtab, setPresetSubtab] = useState('Hitter');
+  const [filters, setFilters] = useState(() =>
+    customFilters.length > 0
+      ? customFilters.map((f) => ({ ...f }))
+      : [{ stat: '', dir: 'min', value: 0 }]
+  );
 
-  const applyCustom = () => {
-    const valid = filters.filter((f) => f.stat && f.value !== '');
-    if (valid.length === 0) { showToast('Add at least one filter.', 'bg-red-500'); return; }
-    setCustomFilters(valid.map((f) => ({ stat: f.stat, value: parseFloat(f.value), dir: f.dir })));
-    showToast(`${valid.length} filter${valid.length > 1 ? 's' : ''} applied!`, 'bg-blue-600');
-    onClose();
-  };
-
-  const addFilter = () => setFilters([...filters, { stat: '', value: '', dir: 'min' }]);
-  const removeFilter = (i) => setFilters(filters.filter((_, idx) => idx !== i));
-  const updateFilter = (i, key, val) => {
+  const handleFilterChange = (index, updated) => {
     const next = [...filters];
-    next[i] = { ...next[i], [key]: val };
-    if (key === 'stat') {
-      const opt = CUSTOM_STAT_OPTIONS.find((o) => o.key === val);
-      if (opt) next[i].dir = opt.dir;
+    next[index] = updated;
+    // Auto-set direction when stat is selected
+    if (updated.stat && updated.stat !== filters[index]?.stat) {
+      const opt = CUSTOM_STAT_OPTIONS.find((o) => o.key === updated.stat);
+      if (opt) next[index].dir = opt.dir;
     }
     setFilters(next);
   };
 
+  const handleRemoveFilter = (index) => {
+    const next = filters.filter((_, i) => i !== index);
+    if (next.length === 0) next.push({ stat: '', dir: 'min', value: 0 });
+    setFilters(next);
+  };
+
+  const handleAddFilter = () => {
+    setFilters([...filters, { stat: '', dir: 'min', value: 0 }]);
+  };
+
+  const handleApplyPreset = (presetFilters) => {
+    const mapped = presetFilters.map((f) => ({
+      stat: f.stat,
+      dir: f.dir,
+      value: f.value,
+    }));
+    setCustomFilters(mapped);
+    setEligibility('custom');
+    onClose();
+  };
+
+  const handleApplyCustom = () => {
+    const valid = filters.filter((f) => f.stat);
+    if (valid.length === 0) {
+      showToast('Add at least one filter', 'bg-red-600');
+      return;
+    }
+    setCustomFilters(valid);
+    setEligibility('custom');
+    onClose();
+  };
+
+  const filteredPresets = CUSTOM_PRESETS.filter(
+    (p) => p.type === presetSubtab.toLowerCase()
+  );
+
   if (!isOpen) return null;
 
-  const presets = CUSTOM_PRESETS.filter((p) => p.type === subTab);
-
   return (
-    <AnimatePresence>
-      <motion.div className="modal-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-        <motion.div className="modal-card p-0" initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-center justify-between p-4 border-b border-slate-700/50">
-            <h2 className="text-lg font-extrabold text-slate-100">Custom Eligibility</h2>
-            <button onClick={onClose} className="text-slate-400 hover:text-white text-xl font-bold w-8 h-8">&times;</button>
-          </div>
+    <motion.div
+      className="modal-overlay"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+    >
+      <motion.div
+        className="modal-card"
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-slate-700/50">
+          <h2 className="text-lg font-bold text-white">Custom Eligibility</h2>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-white transition-colors text-xl leading-none"
+          >
+            &times;
+          </button>
+        </div>
 
-          <div className="flex border-b border-slate-700/50">
-            <button onClick={() => setTab('presets')} className={`flex-1 py-2.5 text-sm font-semibold transition ${tab === 'presets' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-slate-400'}`}>Presets</button>
-            <button onClick={() => setTab('customize')} className={`flex-1 py-2.5 text-sm font-semibold transition ${tab === 'customize' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-slate-400'}`}>Customize</button>
-          </div>
+        {/* Tabs */}
+        <div className="flex bg-surface-raised/50 rounded-xl p-1 mx-4 mt-4">
+          {TABS.map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`segment-btn flex-1 ${tab === t ? 'active' : ''}`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
 
-          <div className="p-4 max-h-[60vh] overflow-y-auto">
-            {tab === 'presets' && (
-              <>
-                <div className="flex gap-2 mb-3">
-                  <button onClick={() => { setSubTab('hitter'); setSelectedPreset(null); }} className={`segment-btn ${subTab === 'hitter' ? 'active' : ''}`}>Hitters</button>
-                  <button onClick={() => { setSubTab('pitcher'); setSelectedPreset(null); }} className={`segment-btn ${subTab === 'pitcher' ? 'active' : ''}`}>Pitchers</button>
-                </div>
-                <div className="space-y-2">
-                  {presets.map((preset) => (
-                    <div
+        {/* Body */}
+        <div className="p-4 overflow-y-auto" style={{ maxHeight: '55vh' }}>
+          {tab === 'Presets' ? (
+            <>
+              {/* Preset subtabs */}
+              <div className="flex bg-surface-raised/50 rounded-xl p-1 mb-3">
+                {PRESET_SUBTABS.map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setPresetSubtab(st)}
+                    className={`segment-btn flex-1 ${presetSubtab === st ? 'active' : ''}`}
+                  >
+                    {st}
+                  </button>
+                ))}
+              </div>
+
+              {/* Preset cards */}
+              <div className="space-y-2">
+                {filteredPresets.length === 0 ? (
+                  <div className="text-center py-4 text-slate-500 text-xs">No presets for this type</div>
+                ) : (
+                  filteredPresets.map((preset) => (
+                    <PresetCard
                       key={preset.id}
-                      onClick={() => setSelectedPreset(preset.id === selectedPreset ? null : preset.id)}
-                      className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${selectedPreset === preset.id ? 'border-blue-500 bg-blue-500/10' : 'border-slate-700 hover:border-slate-600'}`}
-                    >
-                      <div className="font-extrabold text-sm text-slate-200">{preset.name}</div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">{preset.desc}</div>
-                      <div className="text-[10px] text-slate-500 mt-1 font-semibold">
-                        {preset.filters.map((f) => {
-                          const opt = CUSTOM_STAT_OPTIONS.find((o) => o.key === f.stat);
-                          return `${opt?.label || f.stat} ${f.dir === 'max' ? '≤' : '≥'} ${f.value}`;
-                        }).join(', ')}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <button onClick={applyPreset} className="btn-primary mt-4 text-sm py-2.5">Apply Preset</button>
-              </>
-            )}
+                      preset={preset}
+                      onApply={handleApplyPreset}
+                    />
+                  ))
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Custom filter rows */}
+              <div className="space-y-2 mb-3">
+                {filters.map((filter, i) => (
+                  <FilterRow
+                    key={i}
+                    filter={filter}
+                    index={i}
+                    onChange={handleFilterChange}
+                    onRemove={handleRemoveFilter}
+                  />
+                ))}
+              </div>
 
-            {tab === 'customize' && (
-              <>
-                <div className="space-y-2">
-                  {filters.map((f, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <select value={f.stat} onChange={(e) => updateFilter(i, 'stat', e.target.value)} className="flex-1 min-w-0 h-10 bg-slate-800 border border-slate-700 rounded-lg px-2 text-xs font-semibold text-slate-300 truncate">
-                        <option value="">Select stat...</option>
-                        <optgroup label="Batters">
-                          {CUSTOM_STAT_OPTIONS.filter((o) => o.type === 'hitter').map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
-                        </optgroup>
-                        <optgroup label="Pitchers">
-                          {CUSTOM_STAT_OPTIONS.filter((o) => o.type === 'pitcher').map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
-                        </optgroup>
-                        <optgroup label="All Players">
-                          {CUSTOM_STAT_OPTIONS.filter((o) => o.type === 'both').map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
-                        </optgroup>
-                      </select>
-                      <button onClick={() => updateFilter(i, 'dir', f.dir === 'min' ? 'max' : 'min')} className="w-10 h-10 flex items-center justify-center bg-slate-700 border border-slate-600 rounded-lg text-lg font-bold text-slate-200 hover:bg-blue-900/30 hover:text-blue-400 transition flex-shrink-0">
-                        {f.dir === 'max' ? '≤' : '≥'}
-                      </button>
-                      <input type="number" step="any" placeholder="Value" value={f.value} onChange={(e) => updateFilter(i, 'value', e.target.value)} className="w-20 h-10 bg-slate-800 border border-slate-700 rounded-lg px-2 text-sm font-bold text-center text-slate-200" />
-                      <button onClick={() => removeFilter(i)} className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-900/20 rounded-lg transition text-lg font-bold flex-shrink-0">&times;</button>
-                    </div>
-                  ))}
-                </div>
-                <button onClick={addFilter} className="mt-2 text-xs font-bold text-blue-400 hover:text-blue-300">+ Add Filter</button>
-                <button onClick={applyCustom} className="btn-primary mt-4 text-sm py-2.5">Apply Filters</button>
-              </>
-            )}
-          </div>
-        </motion.div>
+              {/* Add filter */}
+              <button
+                onClick={handleAddFilter}
+                className="w-full py-2 rounded-lg border border-dashed border-slate-600 text-xs text-slate-400 hover:text-slate-200 hover:border-slate-400 transition-colors mb-4"
+              >
+                + Add Filter
+              </button>
+
+              {/* Apply button */}
+              <button
+                onClick={handleApplyCustom}
+                disabled={!filters.some((f) => f.stat)}
+                className="btn-primary text-sm !py-2.5"
+              >
+                Apply
+              </button>
+            </>
+          )}
+        </div>
       </motion.div>
-    </AnimatePresence>
+    </motion.div>
   );
 }
