@@ -2,6 +2,7 @@ import { useState } from 'react';
 import useGameStore from '../../stores/gameStore';
 import GameModeCard from './GameModeCard';
 import EraSelector from './EraSelector';
+import CustomEligModal from './CustomEligModal';
 
 // Inline SVG icons for game modes
 const TargetIcon = (
@@ -69,6 +70,7 @@ export default function StartScreen() {
   const startNewGame = useGameStore((s) => s.startNewGame);
 
   const [eraOpen, setEraOpen] = useState(false);
+  const [customEligOpen, setCustomEligOpen] = useState(false);
 
   const eraLabel = () => {
     if (eraMode === 'allEras') return 'All Eras';
@@ -126,7 +128,10 @@ export default function StartScreen() {
           {eligOptions.map((opt) => (
             <button
               key={opt.value}
-              onClick={() => setEligibility(opt.value)}
+              onClick={() => {
+                setEligibility(opt.value);
+                if (opt.value === 'custom') setCustomEligOpen(true);
+              }}
               className={`segment-btn flex-1 ${eligibility === opt.value ? 'active' : ''}`}
             >
               {opt.label}
@@ -164,6 +169,8 @@ export default function StartScreen() {
       <button onClick={startNewGame} className="btn-primary">
         Start Game
       </button>
+
+      <CustomEligModal isOpen={customEligOpen} onClose={() => setCustomEligOpen(false)} />
     </div>
   );
 }

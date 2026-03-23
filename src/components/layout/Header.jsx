@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import useGameStore from '../../stores/gameStore';
 import SettingsPopover from './SettingsPopover';
+import RulesModal from '../modals/RulesModal';
+import LeaderboardModal from '../modals/LeaderboardModal';
+import DailyPopup from '../modals/DailyPopup';
+import ChallengeCodeModal from '../modals/ChallengeCodeModal';
 
 export default function Header() {
   const screen = useGameStore((s) => s.screen);
@@ -8,6 +12,10 @@ export default function Header() {
   const hasUsedReroll = useGameStore((s) => s.hasUsedReroll);
   const hasUsedBomb = useGameStore((s) => s.hasUsedBomb);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
+  const [dailyOpen, setDailyOpen] = useState(false);
+  const [challengeCodeOpen, setChallengeCodeOpen] = useState(false);
 
   const isGame = screen === 'game';
 
@@ -23,7 +31,7 @@ export default function Header() {
               <path d="M9 21V12h6v9" />
             </svg>
           </IconButton>
-          <IconButton label="Rules">
+          <IconButton label="Rules" onClick={() => setRulesOpen(true)}>
             {/* Info icon */}
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
@@ -31,7 +39,7 @@ export default function Header() {
               <line x1="12" y1="8" x2="12.01" y2="8" />
             </svg>
           </IconButton>
-          <IconButton label="Leaderboard">
+          <IconButton label="Leaderboard" onClick={() => setLeaderboardOpen(true)}>
             {/* Chart icon */}
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="12" width="4" height="9" rx="0.5" />
@@ -70,7 +78,7 @@ export default function Header() {
               </svg>
             </IconButton>
           )}
-          <IconButton label="Daily" className="text-amber-400 hover:text-amber-300">
+          <IconButton label="Daily" onClick={() => setDailyOpen(true)} className="text-amber-400 hover:text-amber-300">
             {/* Calendar icon */}
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="4" width="18" height="18" rx="2" />
@@ -79,7 +87,7 @@ export default function Header() {
               <line x1="3" y1="10" x2="21" y2="10" />
             </svg>
           </IconButton>
-          <IconButton label="Challenge Code" className="text-indigo-400 hover:text-indigo-300">
+          <IconButton label="Challenge Code" onClick={() => setChallengeCodeOpen(true)} className="text-indigo-400 hover:text-indigo-300">
             {/* Link icon */}
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
@@ -101,6 +109,10 @@ export default function Header() {
           )}
         </div>
       </div>
+      <RulesModal isOpen={rulesOpen} onClose={() => setRulesOpen(false)} />
+      <LeaderboardModal isOpen={leaderboardOpen} onClose={() => setLeaderboardOpen(false)} />
+      <DailyPopup isOpen={dailyOpen} onClose={() => setDailyOpen(false)} />
+      <ChallengeCodeModal isOpen={challengeCodeOpen} onClose={() => setChallengeCodeOpen(false)} />
     </header>
   );
 }

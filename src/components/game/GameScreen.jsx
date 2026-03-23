@@ -291,26 +291,30 @@ export default function GameScreen() {
       setRoundSubmitted(true);
 
     } else if (gameMode === 'pickEm') {
-      // Pick Em submits are handled within the mode component
-      // This handles the "end round" / next action
+      // Score is tracked in pickEmState.totalRoundPts — add it here once at end of round
       const pts = pickEmState.totalRoundPts;
       const emoji = getPickEmEmoji(pts, pickEmState.picksMade);
+      addScore(pts);
       pushRoundResult(emoji, pts);
       useGameStore.setState({ lastRoundScore: pts, lastRoundFeedback: `+${pts} pts` });
       setRoundSubmitted(true);
 
     } else if (gameMode === 'top10') {
       // Top 10 give up — reveal all remaining
+      // Score was already added per-guess in TopTenMode, so don't add again
       const { answer, revealedPositions, hitCount } = top10State;
+
+      // Calculate score from positions the user actually guessed (before give-up reveal)
+      const userGuessedScore = calculateTop10Score(top10State);
+
       const newRevealed = new Set(revealedPositions);
       for (let i = 0; i < 10; i++) newRevealed.add(i);
       updateTop10State({ revealedPositions: newRevealed, roundOver: true, guessesLeft: 0 });
 
-      const pts = calculateTop10Score(top10State);
       const emoji = getTop10Emoji(hitCount);
-      addScore(pts);
-      pushRoundResult(emoji, pts);
-      useGameStore.setState({ lastRoundScore: pts, lastRoundFeedback: `${hitCount}/10 found! +${pts} pts` });
+      // Don't call addScore — it was already added per correct guess in TopTenMode
+      pushRoundResult(emoji, userGuessedScore);
+      useGameStore.setState({ lastRoundScore: userGuessedScore, lastRoundFeedback: `${hitCount}/10 found! +${userGuessedScore} pts` });
       setRoundSubmitted(true);
     }
   }, [
@@ -376,12 +380,13 @@ export default function GameScreen() {
         maxWidth: '600px',
         margin: '0 auto',
         padding: '0.5rem',
-        minHeight: '100vh',
+        height: '100%',
+        overflow: 'hidden',
       }}
     >
       <ScoreBar categoryLabel={categoryLabel} />
 
-      <div style={{ flex: 1 }}>
+      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
         {renderMode()}
       </div>
 

@@ -25,7 +25,7 @@ export default function PlayerCard({ player, selected, onClick, showStat, statVa
       }}
     >
       <div style={{ fontWeight: 700, fontSize: '1.05rem', marginBottom: '0.25rem' }}>
-        {bbrefUrl ? (
+        {bbrefUrl && revealed ? (
           <a
             href={bbrefUrl}
             target="_blank"

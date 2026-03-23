@@ -5,13 +5,10 @@ import usePlayerStore from '../../../stores/playerStore';
 import { BASE_CATS } from '../../../engine/categories';
 import { formatStat } from '../../../engine/formatters';
 
-const CHAIN_BONUS = [0, 0, 25, 50, 100, 150, 200, 300, 400, 500];
-
 export default function PickEmMode() {
   const currentRound = useGameStore((s) => s.currentRound);
   const pickEmState = useGameStore((s) => s.pickEmState);
   const updatePickEmState = useGameStore((s) => s.updatePickEmState);
-  const addScore = useGameStore((s) => s.addScore);
   const useWholeNumbers = useGameStore((s) => s.useWholeNumbers);
   const showToast = useGameStore((s) => s.showToast);
   const players = usePlayerStore((s) => s.players);
@@ -19,6 +16,7 @@ export default function PickEmMode() {
   const {
     threshold, correctIDs, picksMade, totalRoundPts,
     chainActive, chainCount, roundOver, gridPlayers, catKey, subRole, playerStates,
+    lastVal,
   } = pickEmState;
 
   const catDef = useMemo(() => catKey ? BASE_CATS[catKey] : null, [catKey]);
@@ -42,19 +40,38 @@ export default function PickEmMode() {
     const isCorrect = correctIDs.has(player.id);
     const newStates = { ...playerStates, [player.id]: isCorrect ? 'correct' : 'incorrect' };
 
-    if (isCorrect) {
-      const basePts = 100;
-      const bonus = CHAIN_BONUS[Math.min(chainCount + 1, CHAIN_BONUS.length - 1)] || 0;
-      const pts = basePts + bonus;
+    // Get the player's actual stat value
+    let val;
+    if (catKey === 'teams') val = player.teams ? player.teams.size : 0;
+    else if (catKey === 'seasons') val = player.years ? player.years.size : 0;
+    else val = player.stats ? player.stats[catKey] : null;
 
-      addScore(pts);
+    if (isCorrect) {
+      let pts = 100;
+      let newChainActive = chainActive;
+      let newChainCount = chainCount;
+
+      // Chain bonus: based on distance to threshold
+      if (chainActive && lastVal !== null) {
+        const distCurrent = Math.abs(val - threshold);
+        const distLast = Math.abs(lastVal - threshold);
+        if (distCurrent <= distLast) {
+          newChainCount = (chainCount || 0) + 1;
+          const bonusVal = newChainCount * 50;
+          pts += bonusVal;
+        } else {
+          newChainActive = false;
+        }
+      }
+
+      // Don't call addScore here — GameScreen's handleSubmit adds totalRoundPts
       updatePickEmState({
         picksMade: picksMade + 1,
         totalRoundPts: totalRoundPts + pts,
-        chainCount: chainCount + 1,
-        chainActive: true,
+        chainCount: newChainCount,
+        chainActive: newChainActive,
         playerStates: newStates,
-        lastVal: player.stats ? player.stats[catKey] : null,
+        lastVal: val,
       });
     } else {
       // Wrong pick — round ends
@@ -63,12 +80,12 @@ export default function PickEmMode() {
         chainActive: false,
         roundOver: true,
         playerStates: newStates,
-        lastVal: player.stats ? player.stats[catKey] : null,
+        lastVal: val,
       });
     }
   }, [
-    roundOver, playerStates, correctIDs, chainCount, picksMade, totalRoundPts,
-    catKey, addScore, updatePickEmState,
+    roundOver, playerStates, correctIDs, chainCount, chainActive, lastVal,
+    picksMade, totalRoundPts, threshold, catKey, updatePickEmState,
   ]);
 
   // Check if all correct players have been found
@@ -191,9 +208,10 @@ export default function PickEmMode() {
         gap: '0.5rem',
         fontSize: '0.85rem',
         opacity: 0.8,
+        flexWrap: 'wrap',
       }}>
         <span>Streak: {chainCount}</span>
-        {chainActive && chainCount > 0 && (
+        {chainActive && lastVal !== null && (
           <motion.span
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
@@ -205,8 +223,13 @@ export default function PickEmMode() {
               fontWeight: 600,
             }}
           >
-            +{CHAIN_BONUS[Math.min(chainCount, CHAIN_BONUS.length - 1)]} bonus
+            For +{(chainCount + 1) * 50} bonus, next pick must be {catDef && catDef.lowerBetter ? '\u2265' : '\u2264'} {formatStat(lastVal, catKey, useWholeNumbers)}
           </motion.span>
+        )}
+        {!chainActive && picksMade > 0 && lastVal !== null && (
+          <span style={{ color: '#f59e0b', fontSize: '0.75rem', fontWeight: 600 }}>
+            Chain broken! No more bonus this round.
+          </span>
         )}
         <span style={{ marginLeft: '0.5rem' }}>Total: {totalRoundPts} pts</span>
       </div>

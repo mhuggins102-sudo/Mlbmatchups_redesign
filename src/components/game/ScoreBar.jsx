@@ -1,5 +1,5 @@
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useEffect, useState } from 'react';
+import { motion, AnimatePresence, useSpring, useMotionValue } from 'framer-motion';
 import useGameStore from '../../stores/gameStore';
 
 function getScoreColor(score) {
@@ -13,6 +13,21 @@ function getScoreColor(score) {
 export default function ScoreBar({ categoryLabel }) {
   const round = useGameStore((s) => s.round);
   const score = useGameStore((s) => s.score);
+
+  const motionScore = useMotionValue(score);
+  const springScore = useSpring(motionScore, { stiffness: 120, damping: 20 });
+  const [displayScore, setDisplayScore] = useState(score);
+
+  useEffect(() => {
+    motionScore.set(score);
+  }, [score, motionScore]);
+
+  useEffect(() => {
+    const unsubscribe = springScore.on('change', (v) => {
+      setDisplayScore(Math.round(v));
+    });
+    return unsubscribe;
+  }, [springScore]);
 
   return (
     <div className="score-bar" style={{
@@ -54,7 +69,7 @@ export default function ScoreBar({ categoryLabel }) {
             textAlign: 'right',
           }}
         >
-          {score.toLocaleString()}
+          {displayScore.toLocaleString()}
         </motion.div>
       </AnimatePresence>
     </div>
